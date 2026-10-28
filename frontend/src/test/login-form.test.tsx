@@ -5,8 +5,6 @@ import LoginPage from '@/pages/login/LoginPage';
 import { HttpUtil, Msg } from '@/utils';
 import { renderWithProviders } from './test-utils';
 
-vi.mock('@/components/sponsor/SponsorSlot', () => ({ default: () => null }));
-
 describe('login form', () => {
   beforeEach(() => {
     vi.mocked(HttpUtil.post).mockClear();
