@@ -1,0 +1,158 @@
+name: Custom image
+
+on:
+  push:
+    branches: [custom]
+  pull_request:
+    branches: [custom]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: custom-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/shigella520/3x-ui
+
+jobs:
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm test -- --project unit --project components
+      - run: npm run build
+
+  go:
+    name: Go tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Prepare embedded frontend placeholder for tests
+        run: mkdir -p internal/web/dist && touch internal/web/dist/.gitkeep
+      - run: go test -shuffle=on -count=1 ./...
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: [frontend, go]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/custom' && github.repository == 'shigella520/3x-ui'
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          provenance: mode=max
+          sbom: true
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=GPL-3.0
+          cache-from: type=gha,scope=custom-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=custom-${{ matrix.arch }}
+      - name: Smoke test the built binary
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: docker run --rm --entrypoint /app/x-ui "$IMAGE_NAME@$IMAGE_DIGEST" -v
+      - name: Export image digest
+        env:
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/digests"
+          touch "$RUNNER_TEMP/digests/${IMAGE_DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: custom-digest-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish multi-platform image
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: custom-digest-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish custom and commit tags
+        shell: bash
+        run: |
+          shopt -s nullglob
+          sources=()
+          for file in "$RUNNER_TEMP"/digests/*; do
+            digest="${file##*/}"
+            [[ "$digest" =~ ^[a-f0-9]{64}$ ]]
+            sources+=("$IMAGE_NAME@sha256:$digest")
+          done
+          [[ ${#sources[@]} -eq 2 ]]
+          docker buildx imagetools create \
+            --tag "$IMAGE_NAME:sha-$GITHUB_SHA" \
+            --tag "$IMAGE_NAME:custom" \
+            "${sources[@]}"
+          docker buildx imagetools inspect "$IMAGE_NAME:sha-$GITHUB_SHA" | tee image-manifest.txt
+          {
+            echo '### Published image'
+            echo
+            echo "- Deploy: \`$IMAGE_NAME:custom\`"
+            echo "- Commit: \`$IMAGE_NAME:sha-$GITHUB_SHA\`"
+            echo '- Platforms: linux/amd64, linux/arm64'
+            echo
+            echo '```text'
+            cat image-manifest.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
