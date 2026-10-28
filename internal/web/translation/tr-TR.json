@@ -129,7 +129,6 @@
   },
   "pages": {
     "login": {
-      "hello": "Merhaba",
       "title": "Hoş Geldiniz",
       "loginAgain": "Oturum süreniz doldu, lütfen tekrar giriş yapın.",
       "toasts": {

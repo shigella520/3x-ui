@@ -129,7 +129,6 @@
   },
   "pages": {
     "login": {
-      "hello": "Dobrý deň",
       "title": "Vitajte",
       "loginAgain": "Platnosť prihlásenia vypršala. Prihláste sa znova.",
       "toasts": {

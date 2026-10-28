@@ -129,7 +129,6 @@
   },
   "pages": {
     "login": {
-      "hello": "Xin chào",
       "title": "Chào mừng",
       "loginAgain": "Thời hạn đăng nhập đã hết. Vui lòng đăng nhập lại.",
       "toasts": {

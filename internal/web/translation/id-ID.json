@@ -129,7 +129,6 @@
   },
   "pages": {
     "login": {
-      "hello": "Halo",
       "title": "Selamat Datang",
       "loginAgain": "Sesi Anda telah berakhir, harap masuk kembali",
       "toasts": {

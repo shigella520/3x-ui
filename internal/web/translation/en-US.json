@@ -129,7 +129,6 @@
   },
   "pages": {
     "login": {
-      "hello": "Hello",
       "title": "Welcome",
       "loginAgain": "Your session has expired, please log in again",
       "toasts": {
