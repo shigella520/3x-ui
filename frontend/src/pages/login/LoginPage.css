@@ -213,16 +213,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .login-app::before,
-  .login-app::after,
-  .login-content::before,
-  .login-content::after,
-  .login-wrapper::before {
-    animation: none;
-  }
-}
-
 .login-app .ant-layout-content {
   background: transparent;
 }
@@ -386,7 +376,24 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .login-app::before,
+  .login-app::after,
+  .login-content::before,
+  .login-content::after,
+  .login-wrapper::before {
+    content: none;
+    animation: none;
+    filter: none;
+    will-change: auto;
+  }
+
+  .login-card {
+    background: var(--bg-card-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
   .welcome b {
     animation: none;
   }

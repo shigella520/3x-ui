@@ -31,8 +31,6 @@ import { pauseAnimationsUntilLeave, useTheme } from '@/hooks/useTheme';
 import { LoginFormSchema, TwoFactorCodeSchema, type LoginFormValues } from '@/schemas/login';
 import './LoginPage.css';
 
-const HEADLINE_INTERVAL_MS = 2000;
-
 type LoginForm = LoginFormValues;
 
 const basePath = window.X_UI_BASE_PATH || '';
@@ -49,20 +47,10 @@ export default function LoginPage() {
   const [fetched, setFetched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [twoFactorEnable, setTwoFactorEnable] = useState(false);
-  const [headlineIndex, setHeadlineIndex] = useState(0);
   const methods = useForm<LoginForm>({
     defaultValues: { username: '', password: '', twoFactorCode: '' },
   });
   const [lang, setLang] = useState<string>(() => LanguageManager.getLanguage());
-
-  const headlineWords = useMemo(() => [t('pages.login.hello'), t('pages.login.title')], [t]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setHeadlineIndex((i) => (i + 1) % headlineWords.length);
-    }, HEADLINE_INTERVAL_MS);
-    return () => window.clearInterval(timer);
-  }, [headlineWords.length]);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,7 +178,7 @@ export default function LoginPage() {
                   <span className="brand-accent" aria-hidden="true" />
                 </div>
                 <h2 className="welcome">
-                  <b key={headlineIndex}>{headlineWords[headlineIndex]}</b>
+                  <b>{t('pages.login.title')}</b>
                 </h2>
 
                 <FormProvider {...methods}>
@@ -205,11 +193,15 @@ export default function LoginPage() {
                       rules={{ validate: rhfZodValidate(LoginFormSchema.shape.username) }}
                     >
                       <Input
+                        id="username"
+                        name="username"
                         prefix={<UserOutlined aria-hidden />}
                         autoComplete="username"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         size="large"
                         placeholder={t('username')}
-                        autoFocus
                       />
                     </FormField>
 
@@ -219,6 +211,8 @@ export default function LoginPage() {
                       rules={{ validate: rhfZodValidate(LoginFormSchema.shape.password) }}
                     >
                       <Input.Password
+                        id="password"
+                        name="password"
                         prefix={<LockOutlined aria-hidden />}
                         autoComplete="current-password"
                         size="large"
@@ -233,8 +227,11 @@ export default function LoginPage() {
                         rules={{ validate: rhfZodValidate(TwoFactorCodeSchema) }}
                       >
                         <Input
+                          id="twoFactorCode"
+                          name="twoFactorCode"
                           prefix={<KeyOutlined aria-hidden />}
                           autoComplete="one-time-code"
+                          inputMode="numeric"
                           size="large"
                           placeholder={t('twoFactorCode')}
                         />
