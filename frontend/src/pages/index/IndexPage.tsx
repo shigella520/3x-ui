@@ -1,6 +1,6 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, ConfigProvider, Layout, Modal, Result, Spin, message } from 'antd';
+import { Button, ConfigProvider, Layout, Modal, Result, Spin, Tooltip, message } from 'antd';
 import {
   CopyOutlined,
   CloudDownloadOutlined,
@@ -213,12 +213,16 @@ export default function IndexPage() {
                     onOpenVersionSwitch={() => setVersionOpen(true)}
                   />
 
-                  {health && (
-                    <div className="ov-health" style={{ color: health.color }}>
-                      <span className="ov-health-mark" />
-                      {health.text}
-                    </div>
-                  )}
+                  <div className="ov-health" style={{ color: health?.color }}>
+                    {health && (
+                      <>
+                        <span className="ov-health-mark" aria-hidden />
+                        <Tooltip title={health.text}>
+                          <span className="ov-health-text">{health.text}</span>
+                        </Tooltip>
+                      </>
+                    )}
+                  </div>
 
                   <hr className="ov-rule" />
 

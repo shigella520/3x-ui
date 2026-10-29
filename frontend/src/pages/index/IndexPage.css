@@ -145,6 +145,17 @@
   align-items: center;
   gap: 8px;
   font-size: 12.5px;
+  line-height: 1.6;
+  /* Reserve one line even without an alert so polling cannot shift the dashboard. */
+  height: 1.6em;
+  min-width: 0;
+}
+
+.ov-health-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ov-health-mark {
